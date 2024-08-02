@@ -1,9 +1,11 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"net"
 	"os"
+	"strings"
 )
 
 func main() {
@@ -23,5 +25,20 @@ func main() {
 		fmt.Println("Error accepting connection: ", err.Error())
 		os.Exit(1)
 	}
-	req.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
+
+	reader := bufio.NewReader(req)
+	// Read the first line of the HTTP request
+	requestLine, err := reader.ReadString('\n')
+	if err != nil {
+		fmt.Println("Error reading request:", err)
+		return
+	}
+
+	parts := strings.Split(requestLine, " ")
+	if parts[1] == "/" {
+		req.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
+	} else {
+		req.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
+	}
+
 }
