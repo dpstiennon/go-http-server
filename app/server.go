@@ -10,7 +10,7 @@ import (
 
 func handleEcho(conn net.Conn, toEcho string) {
 	fmt.Println(toEcho)
-	resp := fmt.Sprintf("HTTP/1.1 200 OK\nContent-Type: text/plain\nContent-Length: %d\n\n%v", len(toEcho), toEcho)
+	resp := fmt.Sprintf("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%v", len(toEcho), toEcho)
 	conn.Write([]byte(resp))
 }
 
@@ -45,7 +45,7 @@ func main() {
 	echoRegex, _ := regexp.Compile("/echo/([^/]+)")
 	if path == "/" {
 		conn.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
-	} else if matches := echoRegex.FindStringSubmatch(path); len(matches[1]) > 0 {
+	} else if matches := echoRegex.FindStringSubmatch(path); len(matches) > 1 && len(matches[1]) > 0 {
 		handleEcho(conn, matches[1])
 	} else {
 		conn.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
