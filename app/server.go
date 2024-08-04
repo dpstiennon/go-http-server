@@ -33,8 +33,9 @@ func main() {
 	}
 
 	lines := strings.Split(string(req), "\n")
-	parts := strings.Split(lines[0], " ")
-	if parts[1] == "/" {
+	urlLineParts := strings.Split(lines[0], " ")
+	path := urlLineParts[1]
+	if path == "/" {
 		conn.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
 	} else {
 		conn.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
