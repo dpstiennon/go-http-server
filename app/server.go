@@ -4,8 +4,15 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"regexp"
 	"strings"
 )
+
+func handleEcho(conn net.Conn, toEcho string) {
+	fmt.Println(toEcho)
+	resp := fmt.Sprintf("HTTP/1.1 200 OK\nContent-Type: text/plain\nContent-Length: %d\n\n%v", len(toEcho), toEcho)
+	conn.Write([]byte(resp))
+}
 
 func main() {
 	// You can use print statements as follows for debugging, they'll be visible when running tests.
@@ -35,10 +42,14 @@ func main() {
 	lines := strings.Split(string(req), "\n")
 	urlLineParts := strings.Split(lines[0], " ")
 	path := urlLineParts[1]
+	echoRegex, _ := regexp.Compile("/echo/([^/]+)")
 	if path == "/" {
 		conn.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
+	} else if matches := echoRegex.FindStringSubmatch(path); len(matches[1]) > 0 {
+		handleEcho(conn, matches[1])
 	} else {
 		conn.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
 	}
+	conn.Close()
 
 }
