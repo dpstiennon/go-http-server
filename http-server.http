@@ -1,17 +1,22 @@
+POST http://localhost:80/api/item
+Content-Type: application/json
+
+{}
+
+###
 ### GET request to example server
 GET http://0.0.0.0:4221
     ?generated-in=GoLand
 
-###
-// Request line
-POST /files/new.txt HTTP/1.1
+### This is a request
+POST /files/new2.txt HTTP/1.1
 Host: localhost:4221
 User-Agent: curl/7.64.1
 Accept: */*
-Content-Type: application/octet-stream  // Header that specifies the format of the request body
+Content-Type: text/plain
 
-12345
-###
+stuffnstufffjkdfklaskldfkljsdfjlkdskljfdjkfs
+more stuff
 
 ### Send POST request with json body
 POST  /files/argle.txt HTTP/1.1
@@ -23,5 +28,5 @@ Accept: */*
 
 {
   "id": 999,
-  "value": "content"
+  "value": "other content"
 }

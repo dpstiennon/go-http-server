@@ -45,6 +45,18 @@ func main() {
 
 }
 
+func extractHeaders(requestLines []string) map[string]string {
+	headers := make(map[string]string)
+	for _, line := range requestLines {
+		if line == "" {
+			break
+		}
+		parts := strings.Split(line, ": ")
+		headers[parts[0]] = parts[1]
+	}
+	return headers
+}
+
 func handleRequest(conn net.Conn) {
 	defer conn.Close()
 	req := make([]byte, 1024)
