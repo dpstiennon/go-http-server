@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"net"
@@ -54,8 +55,9 @@ func handleRequest(conn net.Conn) {
 	}
 
 	stringSplitRegex := regexp.MustCompile("(\r)?\n")
-	lines := stringSplitRegex.Split(string(req), -1)
+	lines := stringSplitRegex.Split(string(bytes.TrimRight(req, "\x00")), -1)
 	urlLineParts := strings.Split(lines[0], " ")
+	verb := urlLineParts[0]
 	path := urlLineParts[1]
 	echoRegex, _ := regexp.Compile("/echo/([^/]+)")
 	fileRegex, _ := regexp.Compile("/files/([^/]+)")
@@ -66,7 +68,13 @@ func handleRequest(conn net.Conn) {
 	} else if path == "/user-agent" {
 		handleUserAgent(conn, lines)
 	} else if fmatches := fileRegex.FindStringSubmatch(path); len(fmatches) > 1 && len(fmatches[1]) > 0 {
-		handleFile(conn, fmatches[1])
+		if verb == "POST" {
+			body := getBody(lines)
+			createFile(body, fmatches[1])
+			conn.Write([]byte("HTTP/1.1 201 Created\r\n\r\n"))
+		} else {
+			handleFile(conn, fmatches[1])
+		}
 	} else {
 		conn.Write([]byte("HTTP/1.1 404 Not Found\r\n\r\n"))
 	}
@@ -94,6 +102,26 @@ func handleFile(conn net.Conn, fileName string) {
 	resp := contentTypeResponse(200, "application/octet-stream", fileContent)
 	conn.Write(resp)
 
+}
+
+func getBody(requestLines []string) []string {
+	var bodyStartIndex int
+	for i, line := range requestLines {
+		if line == "" {
+			bodyStartIndex = i + 1
+		}
+	}
+	return requestLines[bodyStartIndex:]
+}
+
+func createFile(bodyLines []string, fileName string) error {
+	filePath := fetchDirectoryArg() + fileName
+	body := strings.Join(bodyLines, "\n")
+	err := os.WriteFile(filePath, []byte(body), 0644)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func simpleResponse(status int, content string) []byte {
