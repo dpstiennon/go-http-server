@@ -13,8 +13,8 @@ import (
 func handleEcho(conn net.Conn, headers map[string]string, toEcho string) {
 	fmt.Println(toEcho)
 	respHeaders := map[string]string{"Content-Type": "text/plain"}
-	if headers["accept-encoding"] == "gzip" {
-		respHeaders["Content-Encoding"] = headers["accept-encoding"]
+	if strings.Contains(headers["accept-encoding"], "gzip") {
+		respHeaders["Content-Encoding"] = "gzip"
 	}
 	resp := ComposeResponse(200, respHeaders, toEcho)
 	conn.Write(resp)
@@ -141,11 +141,6 @@ func createFile(bodyLines []string, fileName string) error {
 	return nil
 }
 
-func simpleResponse(status int, content string) []byte {
-	resp := fmt.Sprintf("HTTP/1.1 %d OK\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n%v", status, len(content), content)
-	return []byte(resp)
-}
-
 func contentTypeResponse(status int, contentType string, content string) []byte {
 	resp := fmt.Sprintf("HTTP/1.1 %d OK\r\nContent-Type: %v\r\nContent-Length: %d\r\n\r\n%v", status, contentType, len(content), content)
 	return []byte(resp)
@@ -170,7 +165,6 @@ func ComposeResponse(status int, headers map[string]string, content string) []by
 
 func handleUserAgent(conn net.Conn, headers map[string]string) {
 	userAgent := headers["user-agent"]
-	respHeaders := map[string]string{"Content-Type": "text/plain"}
-	resp := ComposeResponse(200, respHeaders, userAgent)
+	resp := ComposeResponse(200, map[string]string{"Content-Type": "text/plain"}, userAgent)
 	conn.Write(resp)
 }
