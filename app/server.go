@@ -15,6 +15,8 @@ func handleEcho(conn net.Conn, headers map[string]string, toEcho string) {
 	respHeaders := map[string]string{"Content-Type": "text/plain"}
 	if strings.Contains(headers["accept-encoding"], "gzip") {
 		respHeaders["Content-Encoding"] = "gzip"
+		gzippedData, _ := GzipData([]byte(toEcho))
+		toEcho = string(gzippedData)
 	}
 	resp := ComposeResponse(200, respHeaders, toEcho)
 	conn.Write(resp)
