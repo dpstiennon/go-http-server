@@ -10,9 +10,13 @@ import (
 	"strings"
 )
 
-func handleEcho(conn net.Conn, toEcho string) {
+func handleEcho(conn net.Conn, headers map[string]string, toEcho string) {
 	fmt.Println(toEcho)
-	resp := simpleResponse(200, toEcho)
+	respHeaders := map[string]string{"Content-Type": "text/plain"}
+	if headers["accept-encoding"] == "gzip" {
+		respHeaders["Content-Encoding"] = headers["accept-encoding"]
+	}
+	resp := ComposeResponse(200, respHeaders, toEcho)
 	conn.Write(resp)
 }
 
@@ -47,12 +51,12 @@ func main() {
 
 func extractHeaders(requestLines []string) map[string]string {
 	headers := make(map[string]string)
-	for _, line := range requestLines {
+	for _, line := range requestLines[1:] {
 		if line == "" {
 			break
 		}
 		parts := strings.Split(line, ": ")
-		headers[parts[0]] = parts[1]
+		headers[strings.ToLower(parts[0])] = strings.TrimSpace(parts[1])
 	}
 	return headers
 }
@@ -73,15 +77,16 @@ func handleRequest(conn net.Conn) {
 	path := urlLineParts[1]
 	echoRegex, _ := regexp.Compile("/echo/([^/]+)")
 	fileRegex, _ := regexp.Compile("/files/([^/]+)")
+	headers := extractHeaders(lines)
+	body := getBody(lines)
 	if path == "/" {
 		conn.Write([]byte("HTTP/1.1 200 OK\r\n\r\n"))
 	} else if matches := echoRegex.FindStringSubmatch(path); len(matches) > 1 && len(matches[1]) > 0 {
-		handleEcho(conn, matches[1])
+		handleEcho(conn, headers, matches[1])
 	} else if path == "/user-agent" {
-		handleUserAgent(conn, lines)
+		handleUserAgent(conn, headers)
 	} else if fmatches := fileRegex.FindStringSubmatch(path); len(fmatches) > 1 && len(fmatches[1]) > 0 {
 		if verb == "POST" {
-			body := getBody(lines)
 			createFile(body, fmatches[1])
 			conn.Write([]byte("HTTP/1.1 201 Created\r\n\r\n"))
 		} else {
@@ -144,17 +149,28 @@ func simpleResponse(status int, content string) []byte {
 func contentTypeResponse(status int, contentType string, content string) []byte {
 	resp := fmt.Sprintf("HTTP/1.1 %d OK\r\nContent-Type: %v\r\nContent-Length: %d\r\n\r\n%v", status, contentType, len(content), content)
 	return []byte(resp)
-
 }
 
-func handleUserAgent(conn net.Conn, lines []string) {
-	var userAgent string
-	for _, line := range lines {
-		before, after, found := strings.Cut(line, " ")
-		if found && strings.ToLower(before) == "user-agent:" {
-			userAgent = after
-		}
+func ComposeResponse(status int, headers map[string]string, content string) []byte {
+	codesMap := map[int]string{
+		200: "OK",
+		201: "Created",
+		404: "Not Found",
 	}
-	resp := simpleResponse(200, userAgent)
+	resp := fmt.Sprintf("HTTP/1.1 %d %v\r\n", status, codesMap[status])
+	var headersSlice = make([]string, 0)
+	for key, value := range headers {
+		headersSlice = append(headersSlice, fmt.Sprintf("%v: %v\r\n", key, value))
+	}
+	headersSlice = append(headersSlice, fmt.Sprintf("Content-Length: %d\r\n", len(content)))
+	resp += strings.Join(headersSlice, "")
+	resp += "\r\n" + content
+	return []byte(resp)
+}
+
+func handleUserAgent(conn net.Conn, headers map[string]string) {
+	userAgent := headers["user-agent"]
+	respHeaders := map[string]string{"Content-Type": "text/plain"}
+	resp := ComposeResponse(200, respHeaders, userAgent)
 	conn.Write(resp)
 }
